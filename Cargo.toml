@@ -14,4 +14,11 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-byteorder = "1"
+byteorder = { version  = "1", default-features = false}
+defmt = { version = "0.3", optional = true}
+
+[features]
+default = ["std"]
+std = []
+alloc = []
+defmt = ["dep:defmt"]

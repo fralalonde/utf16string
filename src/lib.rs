@@ -65,6 +65,8 @@
 //! # }
 //! ```
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -74,18 +76,28 @@
     clippy::all
 )]
 
-use std::marker::PhantomData;
-use std::slice::ChunksExact;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
+use core::marker::PhantomData;
+use core::slice::ChunksExact;
 
 use byteorder::ByteOrder;
 
 pub use byteorder::{BigEndian, LittleEndian, BE, LE};
 
+#[cfg(feature = "std")]
 mod error;
+
 mod iters;
 mod slicing;
 mod utf16;
 mod wstr;
+
+#[cfg(any(feature = "alloc", feature = "std"))]
 mod wstring;
 
 #[doc(inline)]
@@ -94,8 +106,10 @@ pub use crate::slicing::SliceIndex;
 /// Error for invalid UTF-16 encoded bytes.
 #[derive(Debug, Copy, Clone)]
 pub struct Utf16Error {
-    valid_up_to: usize,
-    error_len: Option<u8>,
+    /// Up to which char  is this str valid?
+    pub valid_up_to: usize,
+    /// The length of the error
+    pub error_len: Option<u8>,
 }
 
 /// A UTF-16 [`String`]-like type with little- or big-endian byte order.
@@ -129,6 +143,7 @@ pub struct Utf16Error {
 /// let s1: WString<LE> = From::from("hello");
 /// assert_eq!(s0, s1);
 /// ```
+#[cfg(any(feature = "alloc", feature = "std"))]
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct WString<E: 'static + ByteOrder> {
     buf: Vec<u8>,

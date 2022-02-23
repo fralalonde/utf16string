@@ -3,13 +3,23 @@
 //! The type itself lives in the `lib.rs` file to avoid having to have a public alias, but
 //! implementations live here.
 
-use std::fmt;
+#[cfg(feature = "alloc")]
+use alloc::string::String;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 use crate::slicing::SliceIndex;
 use crate::utf16::{is_trailing_surrogate, validate_raw_utf16};
 use crate::{Utf16Error, WStr, WStrCharIndices, WStrChars};
+
+#[cfg(feature = "defmt")]
+impl <E: 'static + ByteOrder> defmt::Format for WStr<E> {
+    fn format(&self, f: defmt::Formatter) {
+        for c in self.chars() {
+            defmt::write!(f, "{}", c)
+        }
+    }
+}
 
 impl WStr<LittleEndian> {
     /// Creates a new `&WStr<LE>`.
@@ -104,8 +114,8 @@ impl WStr<BigEndian> {
 }
 
 impl<E> WStr<E>
-where
-    E: ByteOrder,
+    where
+        E: ByteOrder,
 {
     /// Creates a new `&WStr<E>` from an existing UTF-16 byte-slice.
     ///
@@ -209,8 +219,8 @@ where
     /// [`None`].
     #[inline]
     pub fn get<I>(&self, index: I) -> Option<&<I as SliceIndex<WStr<E>>>::Output>
-    where
-        I: SliceIndex<WStr<E>>,
+        where
+            I: SliceIndex<WStr<E>>,
     {
         index.get(self)
     }
@@ -222,8 +232,8 @@ where
     /// [`None`].
     #[inline]
     pub fn get_mut<I>(&mut self, index: I) -> Option<&mut <I as SliceIndex<WStr<E>>>::Output>
-    where
-        I: SliceIndex<WStr<E>>,
+        where
+            I: SliceIndex<WStr<E>>,
     {
         index.get_mut(self)
     }
@@ -236,8 +246,8 @@ where
     /// character boundaries or otherwise invalid.
     #[inline]
     pub unsafe fn get_unchecked<I>(&self, index: I) -> &<I as SliceIndex<WStr<E>>>::Output
-    where
-        I: SliceIndex<WStr<E>>,
+        where
+            I: SliceIndex<WStr<E>>,
     {
         index.get_unchecked(self)
     }
@@ -253,8 +263,8 @@ where
         &mut self,
         index: I,
     ) -> &mut <I as SliceIndex<WStr<E>>>::Output
-    where
-        I: SliceIndex<WStr<E>>,
+        where
+            I: SliceIndex<WStr<E>>,
     {
         index.get_unchecked_mut(self)
     }
@@ -278,6 +288,7 @@ where
     }
 
     /// Returns this [`WStr`] as a new owned [`String`].
+    #[cfg(any(feature = "alloc", feature = "std"))]
     pub fn to_utf8(&self) -> String {
         self.chars().collect()
     }
@@ -290,8 +301,8 @@ where
 }
 
 impl<E> AsRef<[u8]> for WStr<E>
-where
-    E: ByteOrder,
+    where
+        E: ByteOrder,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -299,18 +310,26 @@ where
     }
 }
 
-impl<E> fmt::Display for WStr<E>
-where
-    E: ByteOrder,
+#[cfg(any(feature = "alloc", feature = "std"))]
+impl<E> core::fmt::Display for WStr<E>
+    where
+        E: ByteOrder,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(f, "{}", self.to_utf8())
     }
 }
 
 #[cfg(test)]
+#[cfg(any(feature = "alloc", feature = "std"))]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "alloc")]
+    use alloc::vec::Vec;
+
+    #[cfg(feature = "alloc")]
+    use alloc::format;
 
     #[test]
     fn test_wstr_from_utf16le() {
